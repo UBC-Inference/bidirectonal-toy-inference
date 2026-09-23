@@ -1,0 +1,22 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+
+# Go
+coordinator/bin/
+coordinator/coverage.out
+coordinator/*.test
+
+# Python
+vllm/.venv/
+vllm/__pycache__/
+vllm/.pytest_cache/
+vllm/.ruff_cache/
+vllm/*.py[cod]
+
+# Local model data
+.cache/
+models/

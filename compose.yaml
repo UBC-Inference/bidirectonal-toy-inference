@@ -1,0 +1,33 @@
+services:
+  coordinator:
+    build:
+      context: ./coordinator
+    environment:
+      PORT: "8080"
+    ports:
+      - "${COORDINATOR_PORT:-8080}:8080"
+    depends_on:
+      vllm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  vllm:
+    build:
+      context: ./vllm
+    environment:
+      PORT: "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
