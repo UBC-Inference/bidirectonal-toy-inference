@@ -42,8 +42,7 @@ func handleRealtime(responseWriter http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var audio audioBuffer
-	var previousItemID *string
+	state := sessionState{config: config}
 
 	for {
 		var event clientEvent
@@ -54,13 +53,13 @@ func handleRealtime(responseWriter http.ResponseWriter, request *http.Request) {
 		var response *serverEvent
 		switch event.Type {
 		case SessionUpdate:
-			response = updateSession(event, &config)
+			response = updateSession(event, &state.config)
 		case InputAudioBufferAppend:
-			response = appendAudio(event, &audio)
+			response = appendAudio(event, &state.audio)
 		case InputAudioBufferCommit:
-			response = commitAudio(event, &audio, &previousItemID)
+			response = commitAudio(event, &state)
 		case InputAudioBufferClear:
-			audio.pending = nil
+			state.audio.pending = nil
 			response = &serverEvent{EventID: newID("event"), Type: InputAudioBufferCleared}
 		default:
 			response = errorEvent(event.EventID, "invalid_value", "unsupported event type", "type")

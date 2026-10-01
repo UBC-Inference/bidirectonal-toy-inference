@@ -7,6 +7,19 @@ import (
 
 const modelID = "Qwen/Qwen2.5-7B-Instruct"
 
+type sessionState struct {
+	config sessionConfig
+	audio  audioBuffer
+	items  []conversationItem
+}
+
+type conversationItem struct {
+	id         string
+	role       string
+	audio      []byte
+	transcript string
+}
+
 type sessionConfig struct {
 	ID               string      `json:"id"`
 	Object           string      `json:"object"`

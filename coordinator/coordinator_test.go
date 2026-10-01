@@ -63,21 +63,26 @@ var _ = Describe("Coordinator", func() {
 
 	Describe("audio buffering", func() {
 		It("retains appended PCM and links committed turns", func() {
-			var buffer audioBuffer
-			var previousItemID *string
+			var state sessionState
 			audio := []byte{0, 0, 1, 0}
 			event := clientEvent{Audio: base64.StdEncoding.EncodeToString(audio)}
-			Expect(appendAudio(event, &buffer)).To(BeNil())
-			Expect(appendAudio(event, &buffer)).To(BeNil())
-			first := commitAudio(clientEvent{}, &buffer, &previousItemID)
+			Expect(appendAudio(event, &state.audio)).To(BeNil())
+			Expect(appendAudio(event, &state.audio)).To(BeNil())
+			first := commitAudio(clientEvent{}, &state)
 			Expect(first.Type).To(Equal(InputAudioBufferCommitted))
 			Expect(first.PreviousItemID).To(BeNil())
-			Expect(buffer.pending).To(BeEmpty())
-			Expect(buffer.committed).To(Equal(append(append([]byte{}, audio...), audio...)))
-			Expect(appendAudio(event, &buffer)).To(BeNil())
-			second := commitAudio(clientEvent{}, &buffer, &previousItemID)
+			Expect(state.audio.pending).To(BeEmpty())
+			Expect(state.items).To(HaveLen(1))
+			Expect(state.items[0].id).To(Equal(first.ItemID))
+			Expect(state.items[0].role).To(Equal("user"))
+			Expect(state.items[0].audio).To(Equal(append(append([]byte{}, audio...), audio...)))
+			Expect(appendAudio(event, &state.audio)).To(BeNil())
+			second := commitAudio(clientEvent{}, &state)
 			Expect(*second.PreviousItemID).To(Equal(first.ItemID))
-			Expect(buffer.committed).To(Equal(audio))
+			Expect(state.items).To(HaveLen(2))
+			Expect(state.items[1].id).To(Equal(second.ItemID))
+			Expect(state.items[1].audio).To(Equal(audio))
+			Expect(state.items[0].audio).To(Equal(append(append([]byte{}, audio...), audio...)))
 		})
 
 		DescribeTable("rejects invalid input without modifying buffered audio", func(audio string) {
@@ -99,11 +104,10 @@ var _ = Describe("Coordinator", func() {
 		})
 
 		It("rejects empty commits without advancing item history", func() {
-			var buffer audioBuffer
-			var previousItemID *string
-			response := commitAudio(clientEvent{}, &buffer, &previousItemID)
+			state := sessionState{items: []conversationItem{{id: "existing", role: "user"}}}
+			response := commitAudio(clientEvent{}, &state)
 			Expect(response.Error.Code).To(Equal("input_audio_buffer_commit_empty"))
-			Expect(previousItemID).To(BeNil())
+			Expect(state.items).To(Equal([]conversationItem{{id: "existing", role: "user"}}))
 		})
 	})
 })

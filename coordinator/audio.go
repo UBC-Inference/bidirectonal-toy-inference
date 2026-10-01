@@ -5,8 +5,7 @@ import "encoding/base64"
 const maxBufferedAudioSize = 24000 * 2 * 60
 
 type audioBuffer struct {
-	pending   []byte
-	committed []byte
+	pending []byte
 }
 
 func appendAudio(event clientEvent, buffer *audioBuffer) *serverEvent {
@@ -27,20 +26,28 @@ func appendAudio(event clientEvent, buffer *audioBuffer) *serverEvent {
 	return nil
 }
 
-func commitAudio(event clientEvent, buffer *audioBuffer, previousItemID **string) *serverEvent {
-	if len(buffer.pending) == 0 {
+func commitAudio(event clientEvent, state *sessionState) *serverEvent {
+	if len(state.audio.pending) == 0 {
 		return errorEvent(event.EventID, "input_audio_buffer_commit_empty", "audio buffer is empty", "audio")
 	}
 
 	itemID := newID("item")
+	var previousItemID *string
+	if len(state.items) > 0 {
+		previousID := state.items[len(state.items)-1].id
+		previousItemID = &previousID
+	}
 	response := &serverEvent{
 		EventID:        newID("event"),
 		Type:           InputAudioBufferCommitted,
-		PreviousItemID: *previousItemID,
+		PreviousItemID: previousItemID,
 		ItemID:         itemID,
 	}
-	buffer.committed = buffer.pending
-	buffer.pending = nil
-	*previousItemID = &itemID
+	state.items = append(state.items, conversationItem{
+		id:    itemID,
+		role:  "user",
+		audio: state.audio.pending,
+	})
+	state.audio.pending = nil
 	return response
 }

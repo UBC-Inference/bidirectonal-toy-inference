@@ -43,6 +43,18 @@ it.
 Sherpa-onnx will consume decoded chunks as they arrive and emit partial
 transcript revisions. It will run in the coordinator process through cgo.
 
+## Conversation State
+
+Each session owns an ordered, in-memory conversation log. Committing audio
+appends a user item with its ID and PCM data; `previous_item_id` is derived
+from the preceding log entry. Clearing pending audio does not remove committed
+items. Disconnecting discards the log.
+
+ASR will attach transcripts to these items, and generation will append
+assistant items. Raw audio is currently retained for the connection lifetime;
+releasing it after transcription and limiting conversation retention remain
+part of the inference integration.
+
 ## Generation
 
 Partial transcripts will start speculative vLLM requests. A newer transcript
