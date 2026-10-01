@@ -4,8 +4,10 @@ services:
       context: ./coordinator
     environment:
       PORT: "8080"
+      COORDINATOR_API_KEY: "${COORDINATOR_API_KEY:?COORDINATOR_API_KEY is required}"
+      VLLM_BASE_URL: "${VLLM_BASE_URL:?VLLM_BASE_URL is required}"
     ports:
-      - "${COORDINATOR_PORT:-8080}:8080"
+      - "${COORDINATOR_PORT:?COORDINATOR_PORT is required}:8080"
     depends_on:
       vllm:
         condition: service_healthy
