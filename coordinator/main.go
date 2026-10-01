@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -17,16 +18,22 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	apiKey := os.Getenv("COORDINATOR_API_KEY")
+	if apiKey == "" {
+		slog.Error("COORDINATOR_API_KEY is required")
+		os.Exit(1)
+	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+	router.GET("/v1/realtime", requireAuth(apiKey), gin.WrapF(handleRealtime))
 
 	server := &http.Server{
 		Addr:              ":" + port,
-		Handler:           mux,
+		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
