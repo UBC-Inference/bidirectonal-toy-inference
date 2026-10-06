@@ -6,6 +6,12 @@ services:
       PORT: "8080"
       COORDINATOR_API_KEY: "${COORDINATOR_API_KEY:?COORDINATOR_API_KEY is required}"
       VLLM_BASE_URL: "${VLLM_BASE_URL:?VLLM_BASE_URL is required}"
+      ASR_ENCODER_PATH: /models/encoder-epoch-99-avg-1.int8.onnx
+      ASR_DECODER_PATH: /models/decoder-epoch-99-avg-1.onnx
+      ASR_JOINER_PATH: /models/joiner-epoch-99-avg-1.int8.onnx
+      ASR_TOKENS_PATH: /models/tokens.txt
+    volumes:
+      - "${ASR_MODEL_DIR:?ASR_MODEL_DIR is required}:/models:ro"
     ports:
       - "${COORDINATOR_PORT:?COORDINATOR_PORT is required}:8080"
     depends_on:
