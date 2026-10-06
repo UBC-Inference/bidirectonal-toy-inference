@@ -55,52 +55,81 @@ var _ = Describe("Coordinator", func() {
 				EventID: "request_1",
 				Session: json.RawMessage(`{"instructions":"after","audio":{"input":{"format":{"rate":16000}}}}`),
 			}, &config)
-			Expect(response.Type).To(Equal(Error))
+			Expect(response.Type).To(Equal(RealtimeError))
 			Expect(response.Error.EventID).To(Equal("request_1"))
 			Expect(config.Instructions).To(Equal("before"))
 		})
 	})
 
 	Describe("audio buffering", func() {
-		It("retains appended PCM and links committed turns", func() {
-			var state sessionState
-			audio := []byte{0, 0, 1, 0}
-			event := clientEvent{Audio: base64.StdEncoding.EncodeToString(audio)}
-			Expect(appendAudio(event, &state.audio)).To(BeNil())
-			Expect(appendAudio(event, &state.audio)).To(BeNil())
+		It("links committed turns and retains only transcript history", func() {
+			state := sessionState{audio: audioBuffer{itemID: "item_1", bytes: 8, transcript: "hello", revision: 2}}
 			first := commitAudio(clientEvent{}, &state)
 			Expect(first.Type).To(Equal(InputAudioBufferCommitted))
+			Expect(first.EventID).NotTo(BeEmpty())
+			Expect(first.ItemID).To(Equal("item_1"))
 			Expect(first.PreviousItemID).To(BeNil())
-			Expect(state.audio.pending).To(BeEmpty())
-			Expect(state.items).To(HaveLen(1))
-			Expect(state.items[0].id).To(Equal(first.ItemID))
-			Expect(state.items[0].role).To(Equal("user"))
-			Expect(state.items[0].audio).To(Equal(append(append([]byte{}, audio...), audio...)))
-			Expect(appendAudio(event, &state.audio)).To(BeNil())
+			Expect(state.audio).To(Equal(audioBuffer{}))
+			firstItem := conversationItem{id: "item_1", role: "user", transcript: "hello", revision: 2}
+			Expect(state.items).To(Equal([]conversationItem{firstItem}))
+			state.audio = audioBuffer{itemID: "item_2", bytes: 2, failed: true}
 			second := commitAudio(clientEvent{}, &state)
 			Expect(*second.PreviousItemID).To(Equal(first.ItemID))
-			Expect(state.items).To(HaveLen(2))
-			Expect(state.items[1].id).To(Equal(second.ItemID))
-			Expect(state.items[1].audio).To(Equal(audio))
-			Expect(state.items[0].audio).To(Equal(append(append([]byte{}, audio...), audio...)))
+			Expect(second.ItemID).To(Equal("item_2"))
+			Expect(second.EventID).NotTo(Equal(first.EventID))
+			Expect(state.items).To(Equal([]conversationItem{firstItem, {id: "item_2", role: "user", failed: true}}))
+			Expect(state.awaitingTranscription).To(Equal(map[string]int{"item_1": 0, "item_2": 1}))
+			Expect(state.audio).To(Equal(audioBuffer{}))
 		})
 
-		DescribeTable("rejects invalid input without modifying buffered audio", func(audio string) {
-			buffer := audioBuffer{pending: []byte{0, 0}}
-			response := appendAudio(clientEvent{Audio: audio}, &buffer)
-			Expect(response.Type).To(Equal(Error))
-			Expect(buffer.pending).To(Equal([]byte{0, 0}))
+		It("allocates IDs only for valid appends and does not reuse a cleared ID", func() {
+			state := sessionState{}
+			command, response := state.handleClientEvent(clientEvent{Type: InputAudioBufferAppend, Audio: "!"})
+			Expect(command).To(BeNil())
+			Expect(response.Type).To(Equal(RealtimeError))
+			Expect(state.nextItemID).To(BeZero())
+			command, response = state.handleClientEvent(clientEvent{Type: InputAudioBufferAppend, Audio: "AAA="})
+			Expect(response).To(BeNil())
+			Expect(command.audioItemID).To(Equal("item_1"))
+			command, response = state.handleClientEvent(clientEvent{Type: InputAudioBufferClear})
+			Expect(command.kind).To(Equal(asrDiscardTurn))
+			Expect(response.ItemID).To(Equal("item_1"))
+			Expect(state.audio).To(Equal(audioBuffer{}))
+			command, response = state.handleClientEvent(clientEvent{Type: InputAudioBufferAppend, Audio: "AAA="})
+			Expect(response).To(BeNil())
+			Expect(command.audioItemID).To(Equal("item_2"))
+			Expect(state.nextItemID).To(Equal(2))
+			command, response = state.handleClientEvent(clientEvent{Type: InputAudioBufferCommit})
+			Expect(command.kind).To(Equal(asrFinishTurn))
+			Expect(response.ItemID).To(Equal("item_2"))
+			Expect(state.awaitingTranscription).To(Equal(map[string]int{"item_2": 0}))
+		})
+
+		DescribeTable("rejects invalid input without modifying the byte count", func(audio, code string) {
+			buffer := audioBuffer{itemID: "item_1", bytes: 2}
+			samples, response := decodeAudio(clientEvent{EventID: "request_1", Audio: audio}, buffer.bytes)
+			Expect(samples).To(BeNil())
+			Expect(response.Type).To(Equal(RealtimeError))
+			Expect(response.Error.Code).To(Equal(code))
+			Expect(response.Error.EventID).To(Equal("request_1"))
+			Expect(response.Error.Param).To(Equal("audio"))
+			Expect(buffer).To(Equal(audioBuffer{itemID: "item_1", bytes: 2}))
 		},
-			Entry("missing audio", ""),
-			Entry("malformed base64", "!"),
-			Entry("incomplete PCM16 sample", "AA=="),
+			Entry("missing audio", "", "missing_required_parameter"),
+			Entry("malformed base64", "!", "invalid_value"),
+			Entry("base64 without audio samples", "\n", "invalid_value"),
+			Entry("incomplete PCM16 sample", "AA==", "invalid_value"),
 		)
 
 		It("enforces the per-turn audio limit", func() {
-			buffer := audioBuffer{pending: make([]byte, maxBufferedAudioSize)}
-			response := appendAudio(clientEvent{Audio: "AAA="}, &buffer)
+			buffer := audioBuffer{bytes: maxBufferedAudioSize}
+			samples, response := decodeAudio(clientEvent{Audio: "AAA="}, buffer.bytes)
+			Expect(samples).To(BeNil())
 			Expect(response.Error.Code).To(Equal("buffer_too_large"))
-			Expect(buffer.pending).To(HaveLen(maxBufferedAudioSize))
+			Expect(buffer.bytes).To(Equal(maxBufferedAudioSize))
+			samples, response = decodeAudio(clientEvent{Audio: base64.StdEncoding.EncodeToString([]byte{0, 128})}, maxBufferedAudioSize-2)
+			Expect(response).To(BeNil())
+			Expect(samples).To(Equal([]float32{-1}))
 		})
 
 		It("rejects empty commits without advancing item history", func() {

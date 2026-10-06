@@ -8,16 +8,65 @@ import (
 const modelID = "Qwen/Qwen2.5-7B-Instruct"
 
 type sessionState struct {
-	config sessionConfig
-	audio  audioBuffer
-	items  []conversationItem
+	config                sessionConfig
+	audio                 audioBuffer
+	items                 []conversationItem
+	nextItemID            int
+	awaitingTranscription map[string]int
 }
 
 type conversationItem struct {
 	id         string
 	role       string
-	audio      []byte
 	transcript string
+	revision   int
+	failed     bool
+}
+
+func (state *sessionState) handleTranscription(result transcriptionResult) *serverEvent {
+	var transcript *string
+	var revision *int
+	var failed *bool
+	if state.audio.itemID != "" && state.audio.itemID == result.audioItemID {
+		transcript, revision, failed = &state.audio.transcript, &state.audio.revision, &state.audio.failed
+	} else {
+		index, awaiting := state.awaitingTranscription[result.audioItemID]
+		if !awaiting {
+			return nil
+		}
+		item := &state.items[index]
+		transcript, revision, failed = &item.transcript, &item.revision, &item.failed
+		if result.turnFinished {
+			delete(state.awaitingTranscription, result.audioItemID)
+		}
+	}
+	contentIndex := 0
+	event := &serverEvent{EventID: newID("event"), ItemID: result.audioItemID, ContentIndex: &contentIndex}
+	if result.err != nil {
+		if *failed {
+			return nil
+		}
+		*failed = true
+		event.Type = TranscriptionFailed
+		event.Error = &eventError{Type: "server_error", Code: "transcription_failed", Message: result.err.Error()}
+		return event
+	}
+	if *failed {
+		return nil
+	}
+	if !result.turnFinished && *transcript == result.transcript {
+		return nil
+	}
+	*transcript = result.transcript
+	*revision = *revision + 1
+	text := result.transcript
+	event.Transcript = &text
+	event.Revision = *revision
+	event.Type = TranscriptionUpdated
+	if result.turnFinished {
+		event.Type = TranscriptionCompleted
+	}
+	return event
 }
 
 type sessionConfig struct {
