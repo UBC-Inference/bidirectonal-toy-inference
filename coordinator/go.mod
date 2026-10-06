@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/k2-fsa/sherpa-onnx-go v1.13.8
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 )
@@ -26,6 +27,9 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-linux v1.13.8 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-macos v1.13.8 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-windows v1.13.8 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
