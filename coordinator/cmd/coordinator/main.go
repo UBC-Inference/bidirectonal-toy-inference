@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/server"
 )
 
 func main() {
@@ -18,14 +20,5 @@ func main() {
 func run() error {
 	shutdownContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
-	config, err := loadCoordinatorConfig()
-	if err != nil {
-		return err
-	}
-	recognizer, err := newNativeRecognizer(config.asr)
-	if err != nil {
-		return err
-	}
-	defer recognizer.Close()
-	return serveCoordinator(shutdownContext, config, recognizer)
+	return server.Run(shutdownContext)
 }

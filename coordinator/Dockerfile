@@ -6,8 +6,9 @@ ENV CGO_ENABLED=1
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY *.go ./
-RUN go build -o /coordinator .
+COPY cmd ./cmd
+COPY internal ./internal
+RUN go build -o /coordinator ./cmd/coordinator
 RUN case "$TARGETARCH" in \
       amd64) native_arch=x86_64-unknown-linux-gnu ;; \
       arm64) native_arch=aarch64-unknown-linux-gnu ;; \
