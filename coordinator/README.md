@@ -46,7 +46,7 @@ From `coordinator/`, with the model exports above:
 export CGO_ENABLED=1
 export COORDINATOR_API_KEY=local-development-key
 export PORT=8080
-go run .
+go run ./cmd/coordinator
 ```
 
 The packaged native platforms are Linux `amd64`, `arm64`, and `arm` (glibc),
@@ -236,7 +236,7 @@ after commit. WAV input must be nonempty PCM16 mono 24 kHz RIFF/WAVE audio.
 go test ./...
 go test -race ./...
 go vet ./...
-go test -tags asr_smoke -run TestNativeASRSmoke -v .
+go test -tags asr_smoke -run TestNativeASRSmoke -v ./internal/realtime
 ```
 
 Normal tests use fake recognizers for protocol/worker behavior but still need
@@ -250,7 +250,7 @@ must be **raw** mono little-endian PCM16 at 24 kHz, without a WAV header:
 ffmpeg -i /path/to/recording.wav -ac 1 -ar 24000 -c:a pcm_s16le -f s16le /tmp/asr-smoke.pcm
 export ASR_SMOKE_PCM_PATH=/tmp/asr-smoke.pcm
 export ASR_SMOKE_EXPECT_TRANSCRIPT="a phrase in the recording"
-go test -tags asr_smoke -run TestNativeASRSmoke -v .
+go test -tags asr_smoke -run TestNativeASRSmoke -v ./internal/realtime
 ```
 
 `ASR_SMOKE_EXPECT_TRANSCRIPT` is optional and checks a case-insensitive substring;
@@ -304,4 +304,4 @@ setting; the coordinator does not read or validate it yet.
 - [Official Go binding v1.13.8](https://github.com/k2-fsa/sherpa-onnx-go/tree/v1.13.8) and its platform modules: [Linux](https://github.com/k2-fsa/sherpa-onnx-go-linux/tree/v1.13.8), [macOS](https://github.com/k2-fsa/sherpa-onnx-go-macos/tree/v1.13.8), [Windows](https://github.com/k2-fsa/sherpa-onnx-go-windows/tree/v1.13.8).
 - [Native transducer stream creation, decoding, and Reset semantics](https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/sherpa-onnx/csrc/online-recognizer-transducer-impl.h).
 - [Native feature extraction and resampling](https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/sherpa-onnx/csrc/features.cc).
-- Local implementation: [native configuration/lifecycle](asr_native.go), [FIFO worker](asr_worker.go), [session ownership/backpressure](realtime.go), [client-event handling](session_events.go), [startup](main.go), and [shutdown ordering](server.go).
+- Local implementation: [native configuration/lifecycle](internal/asr/native.go), [FIFO worker](internal/realtime/asr_worker.go), [session ownership/backpressure](internal/realtime/handler.go), [client-event handling](internal/realtime/session_events.go), [startup](cmd/coordinator/main.go), and [shutdown ordering](internal/server/server.go).

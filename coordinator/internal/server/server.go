@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -8,9 +8,24 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/asr"
 )
 
-func serveCoordinator(shutdownContext context.Context, config coordinatorConfig, recognizer asrRecognizer) error {
+func Run(shutdownContext context.Context) error {
+	config, err := loadCoordinatorConfig()
+	if err != nil {
+		return err
+	}
+	recognizer, err := asr.NewNativeRecognizer(config.asr)
+	if err != nil {
+		return err
+	}
+	defer recognizer.Close()
+	return serveCoordinator(shutdownContext, config, recognizer)
+}
+
+func serveCoordinator(shutdownContext context.Context, config coordinatorConfig, recognizer asr.Recognizer) error {
 	sessionContext, cancelSessions := context.WithCancel(shutdownContext)
 	defer cancelSessions()
 	requests := requestTracker{handler: newRouter(sessionContext, config.apiKey, recognizer)}

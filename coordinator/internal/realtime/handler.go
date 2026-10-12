@@ -1,10 +1,11 @@
-package main
+package realtime
 
 import (
 	"context"
 	"net/http"
 	"time"
 
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/asr"
 	"github.com/gorilla/websocket"
 )
 
@@ -12,7 +13,7 @@ const maxMessageBytes = 16 << 20
 
 var realtimeUpgrader = websocket.Upgrader{}
 
-func handleRealtime(processContext context.Context, recognizer asrRecognizer, responseWriter http.ResponseWriter, request *http.Request) {
+func Handle(processContext context.Context, recognizer asr.Recognizer, responseWriter http.ResponseWriter, request *http.Request) {
 	connection, err := realtimeUpgrader.Upgrade(responseWriter, request, nil)
 	if err != nil {
 		return

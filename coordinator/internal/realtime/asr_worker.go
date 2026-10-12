@@ -1,8 +1,10 @@
-package main
+package realtime
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/asr"
 )
 
 type asrCommandType int
@@ -31,13 +33,13 @@ type transcriptionResult struct {
 }
 
 type asrWorker struct {
-	recognizer  asrRecognizer
-	stream      asrStream
+	recognizer  asr.Recognizer
+	stream      asr.Stream
 	audioItemID string
 	streamError error
 }
 
-func runASRWorker(sessionContext context.Context, recognizer asrRecognizer, commands <-chan asrCommand, results chan<- transcriptionResult, done chan<- struct{}) {
+func runASRWorker(sessionContext context.Context, recognizer asr.Recognizer, commands <-chan asrCommand, results chan<- transcriptionResult, done chan<- struct{}) {
 	defer close(done)
 	worker := asrWorker{recognizer: recognizer}
 	defer worker.closeStream()

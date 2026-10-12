@@ -1,4 +1,4 @@
-package main
+package asr
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ type nativeRecognizer struct {
 	recognizer *sherpa.OnlineRecognizer
 }
 
-type asrConfig struct {
+type Config struct {
 	EncoderPath string
 	DecoderPath string
 	JoinerPath  string
@@ -25,7 +25,7 @@ type nativeStream struct {
 	finished   bool
 }
 
-func newNativeRecognizer(config asrConfig) (*nativeRecognizer, error) {
+func NewNativeRecognizer(config Config) (*nativeRecognizer, error) {
 	for _, model := range []struct{ name, path string }{
 		{"encoder", config.EncoderPath},
 		{"decoder", config.DecoderPath},
@@ -72,7 +72,7 @@ func newNativeRecognizer(config asrConfig) (*nativeRecognizer, error) {
 	return &nativeRecognizer{recognizer: recognizer}, nil
 }
 
-func (r *nativeRecognizer) NewStream() (asrStream, error) {
+func (r *nativeRecognizer) NewStream() (Stream, error) {
 	if r.recognizer == nil {
 		return nil, errors.New("ASR recognizer is closed")
 	}
