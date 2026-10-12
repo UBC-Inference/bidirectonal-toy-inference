@@ -3,6 +3,7 @@ module github.com/UBC-Inference/bidirectonal-toy-inference/coordinator
 go 1.24
 
 require (
+	github.com/gen2brain/malgo v0.11.26
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
