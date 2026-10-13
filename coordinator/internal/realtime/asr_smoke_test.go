@@ -1,12 +1,14 @@
 //go:build asr_smoke
 
-package main
+package realtime
 
 import (
 	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/asr"
 )
 
 func TestNativeASRSmoke(t *testing.T) {
@@ -15,7 +17,7 @@ func TestNativeASRSmoke(t *testing.T) {
 			t.Skipf("native smoke test requires %s", name)
 		}
 	}
-	recognizer, err := newNativeRecognizer(asrConfig{
+	recognizer, err := asr.NewNativeRecognizer(asr.Config{
 		EncoderPath: os.Getenv("ASR_ENCODER_PATH"),
 		DecoderPath: os.Getenv("ASR_DECODER_PATH"),
 		JoinerPath:  os.Getenv("ASR_JOINER_PATH"),
