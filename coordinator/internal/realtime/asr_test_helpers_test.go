@@ -1,4 +1,4 @@
-package main
+package realtime
 
 import (
 	"context"
@@ -12,12 +12,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/asr"
 	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 const asrTestTimeout = 3 * time.Second
+
+type asrRecognizer = asr.Recognizer
+type asrStream = asr.Stream
 
 type fakeASRRecognizer struct{ newStream func() (asrStream, error) }
 
@@ -154,7 +158,7 @@ func realtimeTestServer(recognizer asrRecognizer) (func() *websocket.Conn, <-cha
 	ctx, cancel := context.WithCancel(context.Background())
 	finished := make(chan struct{}, 8)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		handleRealtime(ctx, recognizer, writer, request)
+		Handle(ctx, recognizer, writer, request)
 		finished <- struct{}{}
 	}))
 	DeferCleanup(func() { cancel(); server.Close() })

@@ -6,8 +6,14 @@ two services:
 ```text
 .
 |-- coordinator/
+|   |-- cmd/
+|   |   |-- coordinator/
+|   |   `-- preview/
+|   |-- internal/
+|   |   |-- asr/
+|   |   |-- realtime/
+|   |   `-- server/
 |   |-- go.mod
-|   |-- main.go
 |   `-- Dockerfile
 |-- vllm/
 |   |-- pyproject.toml

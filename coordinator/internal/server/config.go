@@ -1,21 +1,23 @@
-package main
+package server
 
 import (
 	"errors"
 	"os"
+
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/asr"
 )
 
 type coordinatorConfig struct {
 	port   string
 	apiKey string
-	asr    asrConfig
+	asr    asr.Config
 }
 
 func loadCoordinatorConfig() (coordinatorConfig, error) {
 	config := coordinatorConfig{
 		port:   os.Getenv("PORT"),
 		apiKey: os.Getenv("COORDINATOR_API_KEY"),
-		asr: asrConfig{
+		asr: asr.Config{
 			EncoderPath: os.Getenv("ASR_ENCODER_PATH"),
 			DecoderPath: os.Getenv("ASR_DECODER_PATH"),
 			JoinerPath:  os.Getenv("ASR_JOINER_PATH"),

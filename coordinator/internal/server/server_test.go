@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/UBC-Inference/bidirectonal-toy-inference/coordinator/internal/asr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -132,7 +133,7 @@ var _ = Describe("Coordinator server lifecycle", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(config).To(Equal(coordinatorConfig{
 			port: expectedPort, apiKey: key,
-			asr: asrConfig{EncoderPath: "encoder", DecoderPath: "decoder", JoinerPath: "joiner", TokensPath: "tokens"},
+			asr: asr.Config{EncoderPath: "encoder", DecoderPath: "decoder", JoinerPath: "joiner", TokensPath: "tokens"},
 		}))
 	},
 		Entry("defaults the port and maps all ASR paths", "", "secret", "8080"),
